@@ -1,0 +1,33 @@
+# Local Python version
+.python-version
+
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+
+# Ignore override files as they are usually used to override resources locally and so
+# are not checked in
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore configuration files that contain secrets
+terraform/backend.secrets
+terraform/azure.secrets
+azfunctions/local.settings.json
+
+# Ignore lock files
+.terraform.lock.hcl
+
+# IDE files
+.vscode
+
+# venvs for python
+/venv
