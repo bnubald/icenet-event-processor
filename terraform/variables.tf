@@ -19,6 +19,16 @@ variable "location" {
   description = "Which Azure location to build in"
   default     = "uksouth"
 }
+variable "data_topics" {
+    description = "Event Grid topics for blob data changes"
+    type = set(string)
+    default = []
+}
+variable "processing_topics" {
+    description = "Event Grid topics for processing changes"
+    type = set(string)
+    default = []
+}
 # Local variables
 locals {
   database_names = ["icenet"]

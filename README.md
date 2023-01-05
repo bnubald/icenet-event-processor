@@ -8,6 +8,10 @@ The IceNet event processing engine is part of the cloud infrastructure that allo
 
 More to follow soon
 
+## Limitations
+
+Communications service needs manually enabling to use destination services, with azurerm provider, once created.
+
 ## Licensing
 
 Please review the LICENSE file for more information.

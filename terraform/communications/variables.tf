@@ -6,38 +6,16 @@ variable "location" {
   description = "Which Azure location to build in"
   default     = "uksouth"
 }
+variable "resource_group_name" {
+    description = "Resource group name for locating resources"
+    type    = string
+}
 
 variable "default_tags" {
     description = "Default tags for resources"
     type    = map(string)
     default = {}
 }
-variable "resource_group_name" {
-    description = "Resource group name for resource placement"
-    type    = string
-}
-
-variable "connection_endpoint" {
-    description = "Endpoint for messaging"
-    type = string
-}
-
-variable "connection_key" {
-    description = "Key for endpoint access"
-    type = string
-}
-
-variable "data_topics" {
-    description = "Event Grid topics for blob data changes"
-    type = set(string)
-    default = []
-}
-variable "processing_topics" {
-    description = "Event Grid topics for processing changes"
-    type = set(string)
-    default = []
-}
-
 # Local variables
 locals {
   tags = merge(

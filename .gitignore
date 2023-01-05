@@ -31,3 +31,7 @@ azfunctions/local.settings.json
 
 # venvs for python
 /venv
+
+
+*.pyc
+__pycache__/
