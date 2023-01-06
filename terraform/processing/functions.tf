@@ -71,7 +71,7 @@ resource "null_resource" "functions" {
 
   # These will trigger a redeploy
   triggers = {
-  #  always_run = "${timestamp()}"
+    always_run = "${timestamp()}"
   }
 
   provisioner "local-exec" {
