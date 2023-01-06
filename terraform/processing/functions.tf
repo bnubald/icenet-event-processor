@@ -54,8 +54,7 @@ resource "azurerm_linux_function_app" "this" {
     }
   }
   app_settings = {
-    "COMMS_ENDPOINT"            = var.connection_endpoint
-    "COMMS_KEY"                 = var.connection_key
+    "COMMS_ENDPOINT"                 = var.connection_endpoint
     "BUILD_FLAGS"                    = "UseExpressBuild"
     "ENABLE_ORYX_BUILD"              = "true"
     "SCM_DO_BUILD_DURING_DEPLOYMENT" = "1"
