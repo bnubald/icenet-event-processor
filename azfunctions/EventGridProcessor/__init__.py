@@ -21,7 +21,8 @@ def main(event: func.EventGridEvent):
 
     message = "Forecast: {}".format(event.subject)
     from_addr = "DoNotReply@f246be03-b956-4ce0-af11-bda87251aa8c.azurecomm.net"
-    to_addr = "jambyr@bas.ac.uk"
+    to_addr = os.environ["DESTINATION_EMAIL"] \
+        if "DESTINATION_EMAIL" in os.environ else "jambyr@bas.ac.uk"
     send_email(from_addr, to_addr, event.subject, message)
 
 def send_email(from_addr, to_addr, subject, message):
