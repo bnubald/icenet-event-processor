@@ -5,3 +5,5 @@
 # https://azure.github.io/azure-sdk/releases/latest/index.html#python
 azure-functions
 azure-communication-email
+# git+https://github.com/icenet-ai/icenet.git@0.2.1_dev
+xarray
