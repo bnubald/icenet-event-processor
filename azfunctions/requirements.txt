@@ -1,9 +1,9 @@
 # Do not include azure-functions-worker in this file
 # The Python Worker is managed by the Azure Functions platform
 # Manually managing azure-functions-worker may cause unexpected issues
-#
-# https://azure.github.io/azure-sdk/releases/latest/index.html#python
+
 azure-functions
 azure-communication-email
-# git+https://github.com/icenet-ai/icenet.git@0.2.1_dev
-xarray
+icenet
+# Stop pip going off on a search for appropriate versions
+tensorflow==2.9.1
