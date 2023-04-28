@@ -29,6 +29,10 @@ variable "processing_topics" {
     type = set(string)
     default = []
 }
+variable "subnet" {
+    description = "Subnet to deploy in"
+    type = "string"
+}
 # Local variables
 locals {
   database_names = ["icenet"]
@@ -39,4 +43,3 @@ locals {
     "component" : "EventProcessor"
   }
 }
-

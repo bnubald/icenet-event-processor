@@ -41,7 +41,7 @@ def main():
         default="rg-icenetevtproc-terraform",
         help="Name of the Azure resource group",
     )
-   
+
     parser.add_argument(
         "-sa",
         "--azure-storage-account-name",
@@ -62,6 +62,10 @@ def main():
         action="count",
         default=0,
         help="Verbosity level: each '-v' will increase logging level by one step (default is WARNING).",
+    )
+    parser.add_argument(
+        "private_subnet_id",
+        help="Supply the private subnet ID",
     )
 
     # Configure logging, increasing verbosity by one level for each 'v'
@@ -101,7 +105,8 @@ def main():
         subscription_id,
         tenant_id,
         storage_key,
-        args.environment
+        args.environment,
+        args.private_subnet_id,
     )
 
 
@@ -130,7 +135,7 @@ def get_azure_ids(credential, subscription_name):
     return (subscription_id, tenant_id)
 
 
-def write_terraform_configs(subscription_id, tenant_id, storage_key, environment, **kwargs):
+def write_terraform_configs(subscription_id, tenant_id, storage_key, environment, private_subnet_id, **kwargs):
     """Write Terraform config files"""
     # Backend secrets
     backend_secrets_path = os.path.join("terraform", "backend.secrets")
@@ -149,6 +154,7 @@ def write_terraform_configs(subscription_id, tenant_id, storage_key, environment
         "subscription_id": subscription_id,
         "tenant_id": tenant_id,
         "environment": environment,
+        "subnet": private_subnet_id,
     }
     azure_vars.update(kwargs)
     with open(azure_secrets_path, "w") as f_out:

@@ -37,6 +37,10 @@ variable "processing_topics" {
     type = set(string)
     default = []
 }
+variable "subnet" {
+    description = "Subnet to deploy in"
+    type = "string"
+}
 
 # Local variables
 locals {
@@ -54,4 +58,3 @@ locals {
   # app_sku_category = "ElasticPremium"
   app_sku          = "EP1"
 }
-

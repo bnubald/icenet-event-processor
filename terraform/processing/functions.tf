@@ -17,6 +17,14 @@ resource "azurerm_storage_account" "this" {
   account_replication_type = "LRS"
   tags                     = local.tags
 }
+resource "azurerm_storage_account_network_rules" "this" {
+  storage_account_id = azurerm_storage_account.this.id
+
+  default_action             = "Allow"
+  ip_rules                   = []
+  virtual_network_subnet_ids = [var.subnet]
+  bypass                     = []
+}
 
 # Storage container for deploying functions
 resource "azurerm_storage_container" "this" {
@@ -31,7 +39,7 @@ resource "azurerm_service_plan" "this" {
   resource_group_name          = var.resource_group_name
   location                     = var.location
   os_type                      = "Linux"
-  maximum_elastic_worker_count = 2 
+  maximum_elastic_worker_count = 2
   sku_name                     = local.app_sku
   tags                         = local.tags
 }
@@ -50,8 +58,14 @@ resource "azurerm_linux_function_app" "this" {
     application_insights_connection_string = "InstrumentationKey=${azurerm_application_insights.this.instrumentation_key}"
     application_insights_key  = "${azurerm_application_insights.this.instrumentation_key}"
     application_stack {
-      python_version = "3.9"
+      #python_version = "3.9"
+      docker {
+        registry_url            = "registry.hub.docker.com"
+        image_name              = "jimcircadian/iceneteventprocessor"
+        image_tag               = "v0.0.2"
+      }
     }
+    virtual_network_subnet_id  = var.subnet
   }
   app_settings = {
     "COMMS_ENDPOINT"                 = var.connection_endpoint

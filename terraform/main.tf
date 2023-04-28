@@ -21,6 +21,7 @@ module "processing" {
   project_name                 = local.project_name
   resource_group_name          = azurerm_resource_group.this.name
   default_tags                 = local.tags
+  subnet                       = var.subnet
 
   connection_endpoint          = module.communications.connection_string
   connection_key               = module.communications.connection_key
@@ -28,4 +29,3 @@ module "processing" {
   data_topics                  = var.data_topics
   processing_topics            = var.processing_topics
 }
-
