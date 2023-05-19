@@ -15,14 +15,16 @@ def main(event: func.EventGridEvent):
         'event_type': event.event_type,
     })
 
-    logging.info('Python EventGrid trigger processed an event: %s', event.subject)
+    logging.info('IceNet EventGrid trigger processed an event: %s', event.subject)
 
     # Upload and consume configuration for rule processing based on it 
     # https://github.com/Azure-Samples/communication-services-python-quickstarts/blob/main/send-email/send-email.py
 
-    message = """Forecast: {} has SIC threshold changes that are of concern, 
-              please review latest forecast in the icenet-gui!""".format(event.subject)
-    from_addr = "DoNotReply@f246be03-b956-4ce0-af11-bda87251aa8c.azurecomm.net"
+    message = """IceNet Forecast: {} has SIC threshold changes that are of concern, 
+              please review latest forecast...""".format(event.subject)
+
+    # Staging email
+    from_addr = "DoNotReply@7ded58ea-c7b3-4bdc-9205-7d2e6a4fbe9e.azurecomm.net"
     to_addr = os.environ["DESTINATION_EMAIL"] \
         if "DESTINATION_EMAIL" in os.environ else "jambyr@bas.ac.uk"
     send_email(from_addr, to_addr, event.subject, message)
