@@ -3,7 +3,7 @@ import logging
 import os
 import time
 
-from azure.communication.email import EmailClient, EmailContent, EmailAddress, EmailMessage, EmailRecipients
+from azure.communication.email import EmailClient
 import azure.functions as func
 
 def main(event: func.EventGridEvent):
@@ -15,67 +15,72 @@ def main(event: func.EventGridEvent):
         'event_type': event.event_type,
     })
 
-    logging.info('IceNet EventGrid trigger processed an event: %s', event.subject)
+    logging.info("IceNet EventGrid trigger processed an event: {}".format(result))
 
-    # Upload and consume configuration for rule processing based on it 
+    # Upload and consume configuration for rule processing based on it
     # https://github.com/Azure-Samples/communication-services-python-quickstarts/blob/main/send-email/send-email.py
 
-    message = """IceNet Forecast: {} has SIC threshold changes that are of concern, 
-              please review latest forecast...""".format(event.subject)
+    message = """IceNet Forecast: please review latest forecast...
+
+{}
+{}""".format(event.subject, result)
 
     # Staging email
-    from_addr = "DoNotReply@7ded58ea-c7b3-4bdc-9205-7d2e6a4fbe9e.azurecomm.net"
-    to_addr = os.environ["DESTINATION_EMAIL"] \
-        if "DESTINATION_EMAIL" in os.environ else "jambyr@bas.ac.uk"
+    try:
+        from_addr = os.environ["COMMS_FROM_EMAIL"]
+        to_addr = os.environ["COMMS_TO_EMAIL"]
+    except KeyError as e:
+        logging.exception("Missing keys for communications, please set COMMS_FROM_EMAIL and COMMS_TO_EMAIL")
     send_email(from_addr, to_addr, event.subject, message)
 
-def send_email(from_addr, to_addr, subject, message):
+def send_email(from_addr, to_addr, subject, message, poller_wait=10):
     try:
         connection_string = os.environ["COMMS_ENDPOINT"]
         client = EmailClient.from_connection_string(connection_string)
-        content = EmailContent(
-            subject="Forecast arrived with IceNet Event Processor",
-            plain_text=message,
-            html= "<html><p>{}</p></html>".format(message),
-        )
 
-        recipient = EmailAddress(email=to_addr, display_name=to_addr)
+        content = {
+            "subject": "Forecast arrived with IceNet Event Processor",
+            "plainText": message,
+            "html": "<html><p>{}</p></html>".format(message),
+        }
 
-        message = EmailMessage(
-            sender=from_addr,
-            content=content,
-            recipients=EmailRecipients(to=[recipient])
-        )
+        recipients = {"to": [{"address": to_addr}]}
 
-        response = client.send(message)
-        if (not response or response.message_id=='undefined' or response.message_id==''):
-            logging.info("Message Id not found.")
+        message = {
+            "senderAddress":    from_addr,
+            "content":          content,
+            "recipients":       recipients,
+        }
+
+        poller = client.begin_send(message)
+
+        time_elapsed = 0
+
+        while not poller.done():
+            logging.info("Email send poller status: " + poller.status())
+
+            poller.wait(poller_wait)
+            time_elapsed += poller_wait
+
+            if time_elapsed > 18 * poller_wait:
+                raise RuntimeError("Polling timed out.")
+
+        if poller.result()["status"] == "Succeeded":
+            logging.info(f"Successfully sent the email (operation id: {poller.result()['id']})")
         else:
-            logging.info("Send email succeeded for message_id :"+ response.message_id)
-            message_id = response.message_id
-            counter = 0
-            while True:
-                counter+=1
-                send_status = client.get_send_status(message_id)
-
-                if (send_status):
-                    logging.info(f"Email status for message_id {message_id} is {send_status.status}.")
-                if (send_status.status.lower() == "queued" and counter < 12):
-                    time.sleep(10)  # wait for 10 seconds before checking next time.
-                    counter +=1
-                else:
-                    if(send_status.status.lower() == "outfordelivery"):
-                        logging.info(f"Email delivered for message_id {message_id}.")
-                        break
-                    else:
-                        logging.info("Looks like we timed out for checking email send status.")
-                        break
+            raise RuntimeError(str(poller.result()["error"]))
 
     except Exception as ex:
         logging.exception(ex)
 
 if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) != 3:
+        print("Usage: {} from_addr to_addr".format(sys.argv[0]))
+        sys.exit(1)
+
     message = "TEST: {}".format("no_file.nc")
-    from_addr = "DoNotReply@f246be03-b956-4ce0-af11-bda87251aa8c.azurecomm.net"
-    to_addr = "jambyr@bas.ac.uk"
+    from_addr = sys.argv[1]
+    to_addr = sys.argv[2]
     send_email(from_addr, to_addr, "no_file.nc", message)
