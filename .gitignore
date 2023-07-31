@@ -1,37 +1,48 @@
-# Local Python version
-.python-version
+bin
+obj
+csx
+.vs
+edge
+Publish
 
-# Local .terraform directories
-**/.terraform/*
+*.user
+*.suo
+*.cscfg
+*.Cache
+project.lock.json
 
-# .tfstate files
-*.tfstate
-*.tfstate.*
+/packages
+/TestResults
 
-# Crash log files
-crash.log
+/tools/NuGet.exe
+/App_Data
+/secrets
+/data
+.secrets
+appsettings.json
+local.settings.json
 
-# Ignore override files as they are usually used to override resources locally and so
-# are not checked in
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
+node_modules
+dist
 
-# Ignore configuration files that contain secrets
-terraform/backend.secrets
-terraform/azure.secrets
-azfunctions/local.settings.json
+# Local python packages
+.python_packages/
 
-# Ignore lock files
-.terraform.lock.hcl
+# Python Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# IDE files
-.vscode
-
-# venvs for python
-/venv
-
-
-*.pyc
+# Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Azurite artifacts
+__blobstorage__
+__queuestorage__
+__azurite_db*__.json
