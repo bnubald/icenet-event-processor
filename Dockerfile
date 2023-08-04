@@ -19,8 +19,12 @@ RUN pip install --upgrade pip setuptools wheel && rm -rf /var/lib/apt/lists/* &&
         ibicus \
         matplotlib \
         netcdf4 \
+        pyyaml \
         rioxarray \
         'urllib3<=2.0.0' \
-        xarray[io] && pip install --no-deps icenet
+        xarray[io]
+
+COPY icenet-0.2.6a1-py2.py3-none-any.whl /tmp/
+RUN pip install --no-deps /tmp/icenet-0.2.6a1-py2.py3-none-any.whl
 
 COPY . /home/site/wwwroot

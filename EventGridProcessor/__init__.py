@@ -1,12 +1,25 @@
 import json
 import logging
 import os
-import time
+from yaml import load
 
-from azure.communication.email import EmailClient
+try:
+    from yaml import CLoader as Loader, CDumper as Dumper
+except ImportError:
+    from yaml import Loader, Dumper
+
 import azure.functions as func
+import xarray as xr
+
+from EventGridProcessor.utils import send_email
+import EventGridProcessor.checks as checks
+
 
 def main(event: func.EventGridEvent):
+    """
+
+    :param event:
+    """
     result = json.dumps({
         'id': event.id,
         'data': event.get_json(),
@@ -16,71 +29,55 @@ def main(event: func.EventGridEvent):
     })
 
     logging.info("IceNet EventGrid trigger processed an event: {}".format(result))
+    configuration = None
 
-    # Upload and consume configuration for rule processing based on it
-    # https://github.com/Azure-Samples/communication-services-python-quickstarts/blob/main/send-email/send-email.py
-
-    message = """IceNet Forecast: please review latest forecast...
-
-{}
-{}""".format(event.subject, result)
-
-    # Staging email
     try:
-        from_addr = os.environ["COMMS_FROM_EMAIL"]
-        to_addr = os.environ["COMMS_TO_EMAIL"]
-    except KeyError as e:
-        logging.exception("Missing keys for communications, please set COMMS_FROM_EMAIL and COMMS_TO_EMAIL")
-    send_email(from_addr, to_addr, event.subject, message)
+        with open(os.environ["FORECAST_PROCESSING_CONFIG"], "r") as fh:
+            configuration = load(fh, Loader=Loader)
+    except KeyError:
+        logging.exception("Necessary FORECAST_PROCESSING_CONFIG envvar is not "
+                          "set, reverting to default email")
+    except FileNotFoundError:
+        logging.exception("FORECAST_PROCESSING_CONFIG file not available, "
+                          "reverting to default email")
+    finally:
+        if configuration is None or \
+                ("default_email" in configuration and
+                 configuration["default_email"]):
+            logging.warning("No configuration provided, or we've been "
+                            "instructed to send the default event email")
+            message = "IceNet Forecast: please review latest " \
+                      "forecast...\n\n{}".format(result)
+            send_email(event.subject, message)
 
-def send_email(from_addr, to_addr, subject, message, poller_wait=10):
-    try:
-        connection_string = os.environ["COMMS_ENDPOINT"]
-        client = EmailClient.from_connection_string(connection_string)
+    logging.info("Processing event {}".format(event.event_type))
 
-        content = {
-            "subject": "Forecast arrived with IceNet Event Processor",
-            "plainText": message,
-            "html": "<html><p>{}</p></html>".format(message),
-        }
+    if event.event_type == "icenet.forecast.processed":
+        logging.info("Forecast processed event received")
+        subject = "IceNet Forecast has finished processing into the API"
+        send_email(subject, event.subject)
 
-        recipients = {"to": [{"address": to_addr}]}
+    if event.event_type == "Microsoft.Storage.BlobCreated":
+        logging.info("Forecast upload event received")
 
-        message = {
-            "senderAddress":    from_addr,
-            "content":          content,
-            "recipients":       recipients,
-        }
-
-        poller = client.begin_send(message)
-
-        time_elapsed = 0
-
-        while not poller.done():
-            logging.info("Email send poller status: " + poller.status())
-
-            poller.wait(poller_wait)
-            time_elapsed += poller_wait
-
-            if time_elapsed > 18 * poller_wait:
-                raise RuntimeError("Polling timed out.")
-
-        if poller.result()["status"] == "Succeeded":
-            logging.info(f"Successfully sent the email (operation id: {poller.result()['id']})")
+        if "FORECAST_INPUT_PATH" in os.environ:
+            logging.warning("Overriding default forecast path to: {}".format(os.environ["FORECAST_INPUT_PATH"]))
+            local_file_path = os.path.join(os.environ["FORECAST_INPUT_PATH"], os.path.basename(event.subject))
         else:
-            raise RuntimeError(str(poller.result()["error"]))
+            local_file_path = os.path.join(os.sep, "data", "input", os.path.basename(event.subject))
 
-    except Exception as ex:
-        logging.exception(ex)
+        logging.info("Opening {}".format(local_file_path))
+        da = xr.open_dataset(local_file_path).sic_mean
 
-if __name__ == "__main__":
-    import sys
+        for output in configuration["outputs"]:
+            if hasattr(checks, output["implementation"]):
+                logging.info("Calling {} in EventGridProcessor.outputs".
+                             format(output["implementation"]))
+                getattr(checks, output["implementation"])(da, output)
 
-    if len(sys.argv) != 3:
-        print("Usage: {} from_addr to_addr".format(sys.argv[0]))
-        sys.exit(1)
+        for check in configuration["checks"]:
+            if hasattr(checks, check["implementation"]):
+                logging.info("Calling {} in EventGridProcessor.checks".
+                             format(check["implementation"]))
+                getattr(checks, check["implementation"])(da, check)
 
-    message = "TEST: {}".format("no_file.nc")
-    from_addr = sys.argv[1]
-    to_addr = sys.argv[2]
-    send_email(from_addr, to_addr, "no_file.nc", message)
