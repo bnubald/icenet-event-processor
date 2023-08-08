@@ -6,9 +6,11 @@ ENV AzureFunctionsJobHost__Logging__Console__IsEnabled=true \
     PYTHON_ISOLATE_WORKER_DEPENDENCIES=1
 
 COPY requirements.txt /
+
 # RUN apt-get update && apt-get install -y \
 #    gcc g++ libgeos-dev pkg-config libhdf5-103 libhdf5-dev \
 #    && rm -rf /var/lib/apt/lists/* && pip --no-cache-dir install --prefer-binary --user -r /requirements.txt
+
 RUN pip install --upgrade pip setuptools wheel && rm -rf /var/lib/apt/lists/* && \
     pip --no-cache-dir install --prefer-binary \
         azure-functions \
@@ -24,7 +26,5 @@ RUN pip install --upgrade pip setuptools wheel && rm -rf /var/lib/apt/lists/* &&
         'urllib3<=2.0.0' \
         xarray[io]
 
-COPY icenet-0.2.6a1-py2.py3-none-any.whl /tmp/
-RUN pip install --no-deps /tmp/icenet-0.2.6a1-py2.py3-none-any.whl
-
 COPY . /home/site/wwwroot
+RUN pip install --no-deps /home/site/wwwroot/icenet-0.2.6a1-py2.py3-none-any.whl
