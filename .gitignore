@@ -49,3 +49,5 @@ __azurite_db*__.json
 
 ./data/
 /.idea/
+
+/icenet*.whl
