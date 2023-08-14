@@ -19,17 +19,17 @@ def send_email(subject: str,
 
     try:
         from_addr = os.environ["COMMS_FROM_EMAIL"]
-        to_addr = os.environ["COMMS_TO_EMAIL"] if to_addr is None else to_addr
+        to_addr = [os.environ["COMMS_TO_EMAIL"]] if to_addr is None else to_addr
         connection_string = os.environ["COMMS_ENDPOINT"]
         client = EmailClient.from_connection_string(connection_string)
 
         content = {
             "subject": subject,
             "plainText": message,
-            "html": "<html><p>{}</p></html>".format(message),
+            "html": "<html><p>{}</p></html>".format(message.replace("\n", "<br />")),
         }
 
-        recipients = {"to": [{"address": to_addr}]}
+        recipients = {"to": [dict(address=addr) for addr in to_addr]}
 
         message = {
             "senderAddress":    from_addr,
@@ -37,6 +37,7 @@ def send_email(subject: str,
             "recipients":       recipients,
         }
 
+        logging.info("send_email message:\n{}".format(message))
         poller = client.begin_send(message)
 
         time_elapsed = 0

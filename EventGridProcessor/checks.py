@@ -41,17 +41,21 @@ def threshold_check(da: xr.DataArray,
         if len(threshold_years) > 0:
             start = pd.to_datetime(threshold_da.forecast_date.values[0][0]).strftime("%F")
             end = pd.to_datetime(threshold_da.forecast_date.values[0][-1]).strftime("%F")
+            threshold_subject = "{} exceptions in forecast for {} - {}".format(
+                len(threshold_years), start, end
+            )
             threshold_message = f"""
-    Forecast from {start} to {end} has regions that exceed the SIC threshold {threshold["threshold"]} for 
-    {threshold["threshold_held"]} in relation to previous years, where there were crossings. 
+    Forecast from {start} to {end} has regions that exceed the SIC threshold {threshold["threshold"]} for {threshold["threshold_held"]} in relation to previous years, where there were crossings.
 
-    The years that compare are {threshold_years}. You might want to get yourself over to the IceNet dashboard for a 
-    look at the latest forecast.
+    The years that compare are {threshold_years}. You might want to get yourself over to the IceNet dashboard for a look at the latest forecast.
+
 
     Thanks,
 
     The IceNet Team"""
             logging.info("We have message going to {}:\n{}".format(", ".join(threshold["email"]), threshold_message))
-            send_email(threshold_message, threshold["email"])
+            send_email(threshold_subject,
+                       threshold_message,
+                       to_addr=threshold["email"])
             logging.info("Email sent, no further threshold checks will be carried out")
             break
