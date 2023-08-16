@@ -35,6 +35,14 @@ def output_forecast(ds: xr.Dataset,
 
     for leadtime in ds.leadtime:
         pred_da = ds.sel(leadtime=leadtime).sic_mean
+        plot_date = pd.to_datetime(pred_da.time.values) + dt.timedelta(int(leadtime))
+
+        output_filename = os.path.join(output_directory, "{}.png".format(
+            plot_date.strftime("%Y%m%d"),
+        ))
+        if os.path.exists(output_filename):
+            logging.warning("Skipping {} as already exists".format(output_filename))
+            continue
 
         ax = get_plot_axes(do_coastlines=True)
 
@@ -45,13 +53,9 @@ def output_forecast(ds: xr.Dataset,
         im = show_img(ax, pred_da, **bound_args, vmax=1., do_coastlines=True)
 
         plt.colorbar(im, ax=ax)
-        plot_date = pd.to_datetime(ds.time.values) + dt.timedelta(leadtime)
         ax.set_title("{:04d}/{:02d}/{:02d}".format(plot_date.year,
                                                    plot_date.month,
                                                    plot_date.day))
-        output_filename = os.path.join(output_directory, "{}.png".format(
-            plot_date.strftime("%Y%m%d"),
-        ))
 
         logging.info("Saving to {}".format(output_filename))
         plt.savefig(output_filename)
@@ -71,6 +75,7 @@ def output_sie_growth(ds: xr.Dataset,
     binary_fc_da = (fc_da > threshold).astype(int)
 
     sie_by_leadtime = binary_fc_da.sum(['xc', 'yc']) * grid_area_size ** 2
+
     return sie_by_leadtime.to_pandas().to_dict()
 
 

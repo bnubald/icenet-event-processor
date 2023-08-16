@@ -16,7 +16,9 @@ if __name__ == "__main__":
         subject=subj,
         topic="some_topic_or_other",
         event_type="Microsoft.Storage.BlobCreated",
-        data=dict(),
+        data=dict(
+            url="http://example.com/test.url"
+        ),
         data_version=""
     )
     EventGridProcessor.main(evt)

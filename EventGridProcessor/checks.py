@@ -41,8 +41,8 @@ def threshold_check(da: xr.DataArray,
                 threshold_years.append(year)
 
         if len(threshold_years) > 0:
-            start = pd.to_datetime(threshold_da.forecast_date.values[0][0]).strftime("%F")
-            end = pd.to_datetime(threshold_da.forecast_date.values[0][-1]).strftime("%F")
+            start = pd.to_datetime(threshold_da.forecast_date.values[0]).strftime("%F")
+            end = pd.to_datetime(threshold_da.forecast_date.values[-1]).strftime("%F")
             threshold_subject = "{} exceptions in forecast for {} - {}".format(
                 len(threshold_years), start, end
             )

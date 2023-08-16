@@ -96,6 +96,8 @@ def main(event: func.EventGridEvent):
         if len(ds.time.values) > 1:
             logging.warning("Selecting only the first forecast: {}".format(fc_dt.strftime("%F")))
             ds = ds.sel(time=fc_dt)
+        else:
+            ds = ds.isel(time=0)
 
         for process_type in ["checks", "outputs"]:
             logging.info("Processing {} configuration {}".format(process_type, configuration[process_type]))
