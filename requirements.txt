@@ -7,3 +7,14 @@ azure-communication-email
 azure-storage-blob
 azure-identity
 urllib3<=2.0.0
+
+cfgrib
+eccodes
+h5py==2.10.0
+ibicus
+matplotlib
+netcdf4
+pyyaml
+rioxarray
+xarray[io]
+
