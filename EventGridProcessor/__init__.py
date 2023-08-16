@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import sys
 import urllib.parse as urlparser
 
 from yaml import load
@@ -13,11 +14,13 @@ except ImportError:
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 import azure.functions as func
+
+import pandas as pd
 import xarray as xr
 
 from EventGridProcessor.utils import send_email
-import EventGridProcessor.outputs as outputs
-import EventGridProcessor.checks as checks
+import EventGridProcessor.outputs as _outputs
+import EventGridProcessor.checks as _checks
 
 
 def main(event: func.EventGridEvent):
@@ -87,18 +90,34 @@ def main(event: func.EventGridEvent):
             logging.warning("We already have {}, continuing...".format(local_file_path))
 
         logging.info("Opening {}".format(local_file_path))
-        da = xr.open_dataset(local_file_path).sic_mean
+        ds = xr.open_dataset(local_file_path)
+        fc_dt = pd.to_datetime(ds.time.values[0])
 
-        logging.info("Processing output configuration {}".format(configuration["outputs"]))
-        for output in configuration["outputs"]:
-            if hasattr(outputs, output["implementation"]):
-                logging.info("Calling {} in EventGridProcessor.outputs".
-                             format(output["implementation"]))
-                getattr(checks, output["implementation"])(da, output)
+        if len(ds.time.values) > 1:
+            logging.warning("Selecting only the first forecast: {}".format(fc_dt.strftime("%F")))
+            ds = ds.sel(time=fc_dt)
 
-        logging.info("Processing output configuration {}".format(configuration["checks"]))
-        for check in configuration["checks"]:
-            if hasattr(checks, check["implementation"]):
-                logging.info("Calling {} in EventGridProcessor.checks".
-                             format(check["implementation"]))
-                getattr(checks, check["implementation"])(da, check)
+        for process_type in ["checks", "outputs"]:
+            logging.info("Processing {} configuration {}".format(process_type, configuration[process_type]))
+
+            local_outputs_dir = os.path.join(os.sep, "data", process_type, fc_dt.strftime("%F"))
+            os.makedirs(local_outputs_dir, exist_ok=True)
+
+            for process_config in configuration[process_type]:
+                if hasattr(sys.modules[__name__], "_{}".format(process_type)):
+                    proc_module = getattr(sys.modules[__name__], "_{}".format(process_type))
+
+                    if hasattr(proc_module, process_config["implementation"]):
+                        logging.info("Calling {} in EventGridProcessor.{}".
+                                     format(process_config["implementation"], process_type))
+                        getattr(proc_module, process_config["implementation"])(ds,
+                                                                               process_config,
+                                                                               output_directory=local_outputs_dir)
+                    else:
+                        raise RuntimeWarning("{} is not available in EventGridProcessor.{}, "
+                                             "you're trying to process invalid commands".format(
+                                                process_config["implementation"],
+                                                process_type))
+                else:                           
+                    raise RuntimeWarning("EventGridProcessor.{} is not available, "
+                                         "you're trying to process invalid commands".format(process_type))

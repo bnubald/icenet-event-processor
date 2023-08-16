@@ -1,7 +1,32 @@
+import functools
+import json
 import logging
 import os
 
 from azure.communication.email import EmailClient
+
+
+def downstream_process(func):
+    """Decorator for making func as a process, providing preprocessing
+
+    :param func: callable to wrap with context
+    :return:
+    """
+    @functools.wraps(func)
+    def new_func(*args,
+                 output_directory=None,
+                 **kwargs):
+        returnable_output = func(*args, output_directory=output_directory, **kwargs)
+
+        if output_directory is not None:
+            output_path = os.path.join(output_directory, "{}.json".format(func.__name__))
+            logging.info("Output file: {}".format(output_path))
+
+            with open(output_path, "w") as fh:
+                fh.write(json.dumps(returnable_output))
+        return returnable_output
+
+    return new_func
 
 
 def send_email(subject: str,

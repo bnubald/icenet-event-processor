@@ -10,7 +10,9 @@ from EventGridProcessor.utils import send_email
 
 
 def threshold_check(da: xr.DataArray,
-                    check_config: dict):
+                    check_config: dict,
+                    *args,
+                    **kwargs) -> dict:
     """
 
     :param da:
