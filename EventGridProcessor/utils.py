@@ -18,9 +18,7 @@ def downstream_process(func):
                  **kwargs):
         returnable_output = func(*args, output_directory=output_directory, **kwargs)
 
-        print("DEBUG: {}".format(returnable_output))
-
-        if output_directory is not None:
+        if returnable_output is not None and output_directory is not None:
             output_path = os.path.join(output_directory, "{}.json".format(func.__name__))
             logging.info("Output file: {}".format(output_path))
 

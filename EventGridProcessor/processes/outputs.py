@@ -60,6 +60,7 @@ def output_forecast(ds: xr.Dataset,
         logging.info("Saving to {}".format(output_filename))
         plt.savefig(output_filename)
         plt.clf()
+    return None
 
 
 @downstream_process

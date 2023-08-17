@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import logging
 import os
@@ -19,8 +20,6 @@ import pandas as pd
 import xarray as xr
 
 from EventGridProcessor.utils import send_email
-import EventGridProcessor.outputs as _outputs
-import EventGridProcessor.checks as _checks
 
 
 def main(event: func.EventGridEvent):
@@ -106,20 +105,29 @@ def main(event: func.EventGridEvent):
             os.makedirs(local_outputs_dir, exist_ok=True)
 
             for process_config in configuration[process_type]:
-                if hasattr(sys.modules[__name__], "_{}".format(process_type)):
-                    proc_module = getattr(sys.modules[__name__], "_{}".format(process_type))
+                spec_name = "EventGridProcessor.processes.{}".format(process_type)
 
-                    if hasattr(proc_module, process_config["implementation"]):
-                        logging.info("Calling {} in EventGridProcessor.{}".
-                                     format(process_config["implementation"], process_type))
-                        getattr(proc_module, process_config["implementation"])(ds,
-                                                                               process_config,
-                                                                               output_directory=local_outputs_dir)
-                    else:
-                        raise RuntimeWarning("{} is not available in EventGridProcessor.{}, "
-                                             "you're trying to process invalid commands".format(
-                                                process_config["implementation"],
-                                                process_type))
-                else:                           
+                if process_type in sys.modules:
+                    logging.info("processes.{} already in sys.modules".format(process_type))
+                    module = sys.modules[spec_name]
+                elif (spec := importlib.util.find_spec(spec_name)) is not None:
+                    module = importlib.util.module_from_spec(spec)
+                    sys.modules[spec_name] = module
+                    spec.loader.exec_module(module)
+                    logging.info("{} has been imported".format(process_type))
+                else:
                     raise RuntimeWarning("EventGridProcessor.{} is not available, "
                                          "you're trying to process invalid commands".format(process_type))
+
+                if hasattr(module, process_config["implementation"]):
+                    logging.info("Calling {} in EventGridProcessor.{}".
+                                 format(process_config["implementation"], process_type))
+                    getattr(module, process_config["implementation"])(ds,
+                                                                      process_config,
+                                                                      output_directory=local_outputs_dir)
+                else:
+                    raise RuntimeWarning("{} is not available in EventGridProcessor.{}, "
+                                         "you're trying to process invalid commands".format(
+                                            process_config["implementation"],
+                                            process_type))
+
