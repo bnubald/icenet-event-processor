@@ -50,7 +50,7 @@ def output_forecast(ds: xr.Dataset,
         cmap.set_bad("dimgrey")
         bound_args = dict(cmap=cmap)
 
-        im = show_img(ax, pred_da, **bound_args, vmax=1., do_coastlines=True)
+        im = show_img(ax, pred_da, **bound_args, vmax=1., do_coastlines=False)
 
         plt.colorbar(im, ax=ax)
         ax.set_title("{:04d}/{:02d}/{:02d}".format(plot_date.year,
