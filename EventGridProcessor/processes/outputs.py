@@ -44,7 +44,7 @@ def output_forecast(ds: xr.Dataset,
             logging.warning("Skipping {} as already exists".format(output_filename))
             continue
 
-        ax = get_plot_axes(do_coastlines=True)
+        ax = get_plot_axes(do_coastlines=False)
 
         cmap = cm.get_cmap("Blues_r")
         cmap.set_bad("dimgrey")
