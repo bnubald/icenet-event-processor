@@ -54,8 +54,8 @@ def main(event: func.EventGridEvent):
         if configuration is None or \
                 ("default_email" in configuration and
                  configuration["default_email"]):
-            logging.warning("No configuration provided, or we've been "
-                            "instructed to send the default event email")
+            logging.info("No configuration provided, or we've been "
+                         "instructed to send the default event email")
             message = "IceNet Forecast: please review latest " \
                       "forecast...\n\n{}".format(result)
             send_email(event.subject, message)
@@ -122,9 +122,12 @@ def main(event: func.EventGridEvent):
                 if hasattr(module, process_config["implementation"]):
                     logging.info("Calling {} in EventGridProcessor.{}".
                                  format(process_config["implementation"], process_type))
-                    getattr(module, process_config["implementation"])(ds,
-                                                                      process_config,
-                                                                      output_directory=local_outputs_dir)
+                    try:
+                        getattr(module, process_config["implementation"])(ds,
+                                                                          process_config,
+                                                                          output_directory=local_outputs_dir)
+                    except Exception as e:
+                        logging.exception(e)
                 else:
                     raise RuntimeWarning("{} is not available in EventGridProcessor.{}, "
                                          "you're trying to process invalid commands".format(
