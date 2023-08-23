@@ -33,33 +33,42 @@ def output_forecast(ds: xr.Dataset,
                     **kwargs) -> dict:
     logging.info("Called output_forecast")
 
-    for leadtime in ds.leadtime:
-        pred_da = ds.sel(leadtime=leadtime).sic_mean
-        plot_date = pd.to_datetime(pred_da.time.values) + dt.timedelta(int(leadtime))
+    for data_type in ["sic_mean", "sic_stddev"]:
+        for leadtime in ds.leadtime:
+            pred_da = getattr(ds.sel(leadtime=leadtime), data_type)
+            plot_date = pd.to_datetime(pred_da.time.values) + dt.timedelta(int(leadtime))
 
-        output_filename = os.path.join(output_directory, "{}.png".format(
-            plot_date.strftime("%Y%m%d"),
-        ))
-        if os.path.exists(output_filename):
-            logging.warning("Skipping {} as already exists".format(output_filename))
-            continue
+            output_filename = os.path.join(output_directory, "{}.{}.png".format(
+                data_type, plot_date.strftime("%Y%m%d"),
+            ))
+            if os.path.exists(output_filename):
+                logging.warning("Skipping {} as already exists".format(output_filename))
+                continue
 
-        ax = get_plot_axes(do_coastlines=False)
+            ax = get_plot_axes(do_coastlines=False)
 
-        cmap = cm.get_cmap("Blues_r")
-        cmap.set_bad("dimgrey")
-        bound_args = dict(cmap=cmap)
+            if data_type == "sic_stddev":
+                cmap_name = "BuPu_r"
+                vmax = float(pred_da.max())
+            else:
+                cmap_name = "Blues_r"
+                vmax = 1.
 
-        im = show_img(ax, pred_da, **bound_args, vmax=1., do_coastlines=False)
+            cmap = cm.get_cmap(cmap_name)
+            cmap.set_bad("dimgrey")
+            bound_args = dict(cmap=cmap)
 
-        plt.colorbar(im, ax=ax)
-        ax.set_title("{:04d}/{:02d}/{:02d}".format(plot_date.year,
-                                                   plot_date.month,
-                                                   plot_date.day))
+            im = show_img(ax, pred_da, **bound_args, vmax=vmax, do_coastlines=False)
 
-        logging.info("Saving to {}".format(output_filename))
-        plt.savefig(output_filename)
-        plt.clf()
+            plt.colorbar(im, ax=ax)
+            ax.set_title("{} - {:04d}/{:02d}/{:02d}".format(data_type,
+                                                            plot_date.year,
+                                                            plot_date.month,
+                                                            plot_date.day))
+
+            logging.info("Saving to {}".format(output_filename))
+            plt.savefig(output_filename)
+            plt.close()
     return None
 
 
