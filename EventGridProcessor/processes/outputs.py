@@ -15,6 +15,8 @@ from icenet.plotting.utils import (
 
 from EventGridProcessor.utils import downstream_process
 
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+
 
 @downstream_process
 def output_metadata(ds: xr.Dataset,
@@ -34,8 +36,12 @@ def output_forecast(ds: xr.Dataset,
     logging.info("Called output_forecast")
 
     for data_type in ["sic_mean", "sic_stddev"]:
+        data_type_da = getattr(ds, data_type)
+
+        vmax = float(data_type_da.max()) if data_type == "sic_stddev" else 1.
+
         for leadtime in ds.leadtime:
-            pred_da = getattr(ds.sel(leadtime=leadtime), data_type)
+            pred_da = data_type_da.sel(leadtime=leadtime)
             plot_date = pd.to_datetime(pred_da.time.values) + dt.timedelta(int(leadtime))
 
             output_filename = os.path.join(output_directory, "{}.{}.png".format(
@@ -47,13 +53,7 @@ def output_forecast(ds: xr.Dataset,
 
             ax = get_plot_axes(do_coastlines=False)
 
-            if data_type == "sic_stddev":
-                cmap_name = "BuPu_r"
-                vmax = float(pred_da.max())
-            else:
-                cmap_name = "Blues_r"
-                vmax = 1.
-
+            cmap_name = "BuPu_r" if data_type == "sic_stddev" else "Blues_r"
             cmap = cm.get_cmap(cmap_name)
             cmap.set_bad("dimgrey")
             bound_args = dict(cmap=cmap)
