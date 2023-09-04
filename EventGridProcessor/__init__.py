@@ -43,11 +43,11 @@ def main(event: func.EventGridEvent):
         with open(os.environ["FORECAST_PROCESSING_CONFIG"], "r") as fh:
             configuration = load(fh, Loader=Loader)
     except KeyError:
-        logging.exception("Necessary FORECAST_PROCESSING_CONFIG envvar is not "
-                          "set, reverting to default email")
+        logging.warning("Necessary FORECAST_PROCESSING_CONFIG envvar is not "
+                        "set, reverting to default email")
     except FileNotFoundError:
-        logging.exception("FORECAST_PROCESSING_CONFIG file not available, "
-                          "reverting to default email")
+        logging.warning("FORECAST_PROCESSING_CONFIG file not available, "
+                        "reverting to default email")
     finally:
         logging.debug("Configuration provided: {}".format(configuration))
 
@@ -88,49 +88,51 @@ def main(event: func.EventGridEvent):
         else:
             logging.warning("We already have {}, continuing...".format(local_file_path))
 
-        logging.info("Opening {}".format(local_file_path))
-        ds = xr.open_dataset(local_file_path)
-        fc_dt = pd.to_datetime(ds.time.values[0])
+        if configuration is not None:
+            logging.info("Opening {}".format(local_file_path))
+            ds = xr.open_dataset(local_file_path)
+            fc_dt = pd.to_datetime(ds.time.values[0])
 
-        if len(ds.time.values) > 1:
-            logging.warning("Selecting only the first forecast: {}".format(fc_dt.strftime("%F")))
-            ds = ds.sel(time=fc_dt)
+            if len(ds.time.values) > 1:
+                logging.warning("Selecting only the first forecast: {}".format(fc_dt.strftime("%F")))
+                ds = ds.sel(time=fc_dt)
+            else:
+                ds = ds.isel(time=0)
+
+            for process_type in ["checks", "outputs"]:
+                logging.info("Processing {} configuration {}".format(process_type, configuration[process_type]))
+
+                local_outputs_dir = os.path.join(os.sep, "data", process_type, fc_dt.strftime("%F"))
+                os.makedirs(local_outputs_dir, exist_ok=True)
+
+                for process_config in configuration[process_type]:
+                    spec_name = "EventGridProcessor.processes.{}".format(process_type)
+
+                    if process_type in sys.modules:
+                        logging.info("processes.{} already in sys.modules".format(process_type))
+                        module = sys.modules[spec_name]
+                    elif (spec := importlib.util.find_spec(spec_name)) is not None:
+                        module = importlib.util.module_from_spec(spec)
+                        sys.modules[spec_name] = module
+                        spec.loader.exec_module(module)
+                        logging.info("{} has been imported".format(process_type))
+                    else:
+                        raise RuntimeWarning("EventGridProcessor.{} is not available, "
+                                             "you're trying to process invalid commands".format(process_type))
+
+                    if hasattr(module, process_config["implementation"]):
+                        logging.info("Calling {} in EventGridProcessor.{}".
+                                     format(process_config["implementation"], process_type))
+                        try:
+                            getattr(module, process_config["implementation"])(ds,
+                                                                              process_config,
+                                                                              output_directory=local_outputs_dir)
+                        except Exception as e:
+                            logging.exception(e)
+                    else:
+                        raise RuntimeWarning("{} is not available in EventGridProcessor.{}, "
+                                             "you're trying to process invalid commands".format(
+                                                process_config["implementation"],
+                                                process_type))
         else:
-            ds = ds.isel(time=0)
-
-        for process_type in ["checks", "outputs"]:
-            logging.info("Processing {} configuration {}".format(process_type, configuration[process_type]))
-
-            local_outputs_dir = os.path.join(os.sep, "data", process_type, fc_dt.strftime("%F"))
-            os.makedirs(local_outputs_dir, exist_ok=True)
-
-            for process_config in configuration[process_type]:
-                spec_name = "EventGridProcessor.processes.{}".format(process_type)
-
-                if process_type in sys.modules:
-                    logging.info("processes.{} already in sys.modules".format(process_type))
-                    module = sys.modules[spec_name]
-                elif (spec := importlib.util.find_spec(spec_name)) is not None:
-                    module = importlib.util.module_from_spec(spec)
-                    sys.modules[spec_name] = module
-                    spec.loader.exec_module(module)
-                    logging.info("{} has been imported".format(process_type))
-                else:
-                    raise RuntimeWarning("EventGridProcessor.{} is not available, "
-                                         "you're trying to process invalid commands".format(process_type))
-
-                if hasattr(module, process_config["implementation"]):
-                    logging.info("Calling {} in EventGridProcessor.{}".
-                                 format(process_config["implementation"], process_type))
-                    try:
-                        getattr(module, process_config["implementation"])(ds,
-                                                                          process_config,
-                                                                          output_directory=local_outputs_dir)
-                    except Exception as e:
-                        logging.exception(e)
-                else:
-                    raise RuntimeWarning("{} is not available in EventGridProcessor.{}, "
-                                         "you're trying to process invalid commands".format(
-                                            process_config["implementation"],
-                                            process_type))
-
+            logging.info("Not processing as we don't have a configuration")
