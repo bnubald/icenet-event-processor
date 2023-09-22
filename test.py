@@ -7,8 +7,8 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 import azure.functions as func
 
-# export FORECAST_PROCESSING_CONFIG=/home/jambyr/code/ai-lab/icenet/icenet-caribou-ceas/event-processor/event-processing.yaml
-# python test.py /home/jambyr/code/ai-lab/icenet/icenet-pipeline/results/predict/north_daily_forecast.2023-07-24.nc
+# export FORECAST_PROCESSING_CONFIG=/data/event-processing.yaml
+# python test.py /data/north_daily_forecast.2023-09-15.nc
 
 if __name__ == "__main__":
     # This is just easier to test locally than hooking up event grid in Azure
