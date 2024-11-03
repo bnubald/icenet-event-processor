@@ -39,7 +39,7 @@ def threshold_check(da: xr.DataArray,
                                        dimensions={k: slice(*v) for k, v in year_region.items()})
 
             logging.debug("Year {} has {}/{} violations of threshold".format(year, len(result),
-                                                                             np.product(threshold_da.shape)))
+                                                                             np.prod(threshold_da.shape)))
 
             if len(result) > 0:
                 threshold_years.append(year)
