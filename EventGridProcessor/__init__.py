@@ -69,15 +69,19 @@ def main(event: func.EventGridEvent):
 
     if event.event_type == "Microsoft.Storage.BlobCreated":
         logging.info("Forecast upload event received")
+        sas_token = os.getenv("AZURE_STORAGE_SAS_TOKEN")
 
         local_file_path = os.path.join(os.sep, "data", os.path.basename(event.subject))
         if not os.path.exists(local_file_path):
             account_url = urlparser.urlparse(event.get_json()["url"])
-            account_location = "{}://{}".format(account_url.scheme, account_url.netloc)
             logging.debug("Received {}".format(account_url))
-
-            blob_service_client = BlobServiceClient(account_location,
-                                                    credential=DefaultAzureCredential())
+            if sas_token:
+                sas_url = f"{account_url.scheme}://{account_url.netloc}?{sas_token}"
+                blob_service_client = BlobServiceClient(sas_url)
+            else:
+                account_location = f"{account_url.scheme}://{account_url.netloc}"
+                blob_service_client = BlobServiceClient(account_location,
+                                                        credential=DefaultAzureCredential())
             container_client = blob_service_client.get_container_client(container="data")
             logging.info("Downloading blob to {}".format(local_file_path))
 
